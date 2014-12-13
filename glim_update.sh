@@ -3,7 +3,7 @@
 #clear
 
 # ToDo List
-# - a way to delete old/previous ISO versions
+# ToDo - a way to delete old/previous ISO versions
 
 
 #
@@ -28,7 +28,7 @@ function contains() {
 
 if [ ! -f ./glim_update.conf ] || [ "$1" == "-c" ]
 then
-	# ToDo - use values from existing config file when -c is used
+	# ToDo - use values from existing config file as default when -c is used
 
 	read -e -p "USB-mount-point: " USBDIR
 	if [ "$USBDIR" == "" ]
@@ -181,18 +181,28 @@ do
 	wget --quiet --show-progress $wget_link
 done
 
+# make sure all changes are written to USB
 sync
 
-exit
-
-# tinycorelinux needs the cde-dir from the iso to be in the usb-root
-if [ -f $USBISO/tinycorelinux/CorePlus-current.iso ] && [ ! -d $USBDIR/cde ]
+# TinyCoreLinux needs the cde-dir from the iso to be in the usb-root
+name=`grep 'isoname=' $GLIMDIR/grub2/inc-tinycorelinux.cfg | grep -v '#' | cut -d'"' -f2`
+if [ -f $ISODIR/tinycorelinux/$name ] && [ ! -d $USBDIR/cde ]
 then
-	echo "should it be cde or tce ?"
-#	7z x -o $USBDIR/cde $USBISO/tinycorelinux/CorePlus-current.iso cde/
-#	7z x -o $USBDIR/tce $USBISO/tinycorelinux/CorePlus-current.iso cde/
+	echo ">> Extracting files from $name"
+	7z x -o$USBDIR $ISODIR/tinycorelinux/$name cde/ >/dev/null
 fi
 
+# OpenELEC needs KERNEL and SYSTEM in the usb-root
+name=`grep 'isoname=' $GLIMDIR/grub2/inc-openelec.cfg | grep -v '#' | cut -d'"' -f2`
+if [ -f $ISODIR/openelec/$name ] && [ ! -f $USBDIR/KERNEL ] && [ ! -f $USBDIR/SYSTEM ]
+then
+	echo ">> Extracting files from $name"
+	tar -xvf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/KERNEL
+	tar -xvf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/SYSTEM
+fi
+
+
+exit
 
 
 # ToDo - unpacking etc.
