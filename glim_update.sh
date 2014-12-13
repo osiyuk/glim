@@ -4,7 +4,7 @@
 
 # ToDo List
 # ToDo - a way to delete old/previous ISO versions
-
+# ToDo - remove empty directories from USBISO dir
 
 #
 ## Functions
@@ -101,16 +101,16 @@ done
 
 rsync -a $GLIMDIR/grub2/ $USBDIR/boot/grub2
 
-for file in `ls $GLIMDIR/grub2/inc*\.cfg`
+for incfile in `ls $GLIMDIR/grub2/inc*\.cfg`
 do
-	# if there is no isolink in $file don't even ask about downloading
-	isolinktest=`grep -m1 isolink $file`
+	# if there is no isolink in $incfile don't even ask about downloading
+	isolinktest=`grep -m1 isolink $incfile`
 	if [ "$isolinktest" == "" ]
 	then
 		continue
 	fi
 
-	read -p "Do you want to download ISO's for '$(echo $file|sed s/'.*inc-'/''/|sed s/'.cfg'/''/)'? [y/N] " distro
+	read -p "Do you want to download ISO's for '$(echo $incfile|sed s/'.*inc-'/''/|sed s/'.cfg'/''/)'? [y/N] " distro
 	if [ "$distro" != "y" ] && [ "$distro" != "Y" ]
 	then
 		continue
@@ -170,7 +170,7 @@ do
 			file=""; link=""; name=""
 		fi
 
-	done < <(grep -E 'iso(file|link|name)=' $file | grep -v '#')
+	done < <(grep -E 'iso(file|link|name)=' $incfile | grep -v '#')
 done
 
 for wget_link in "${wget_links[@]}"
