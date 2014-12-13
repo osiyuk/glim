@@ -82,7 +82,7 @@ fi
 
 # find the longest iso name
 maxl=0
-for file in `ls $GLIMDIR/grub2/inc*\.cfg`
+for incfile in `ls $GLIMDIR/grub2/inc*\.cfg`
 do
 	while read line
 	do
@@ -94,7 +94,7 @@ do
 				maxl=${#name}
 			fi
 		fi
-	done < <(grep 'isoname=' $file | grep -v '#')
+	done < <(grep 'isoname=' $incfile | grep -v '#')
 done
 
 # ToDo - check if grub2 has been installed in the USBDIR
@@ -116,6 +116,9 @@ do
 		continue
 	fi
 
+	# reset the variables
+	file=""; link=""; name=""
+
 	while read -r line
 	do
 		if [[ "$line" == *isofile=* ]]
@@ -135,34 +138,32 @@ do
 		if [ "$file" != "" ] && [ "$link" != "" ] && [ "$name" != "" ]
 		then
 			# check if file is already in checked list
-			if [ $(contains "${glim_list[@]}" "$file/$link/$name") == "y" ]
+			if [ $(contains "${glim_list[@]}" "$file/$link/$name") != "y" ]
 			then
-				continue
-			fi
+				# add this file to checked list ( should it be $file, $link or $name ? )
+				glim_list=("${glim_list[@]}" "$file/$link/$name")
 
-			# add this file to checked list ( should it be $file, $link or $name ? )
-			glim_list=("${glim_list[@]}" "$file/$link/$name")
+				# replace the ${isoname} and ${isopath} grub-variables
+				file=`echo "$file"|sed s/'${isoname}'/"$name"/g|sed s:'${isopath}':"$ISODIR":g`
+				link=`echo "$link"|sed s/'${isoname}'/"$name"/g`
 
-			# replace the ${isoname} and ${isopath} grub-variables
-			file=`echo "$file"|sed s/'${isoname}'/"$name"/g|sed s:'${isopath}':"$ISODIR":g`
-			link=`echo "$link"|sed s/'${isoname}'/"$name"/g`
+				# ToDo - check md5 checksum of downloaded file
+				# - how to get the md5 checksum for an iso?
+				# - maybe set isomd5="" in the grub .cfg files?
+				# - this should also fix isos where the filename doesn't change when there is a new release...
 
-			# ToDo - check md5 checksum of downloaded file
-			# - how to get the md5 checksum for an iso?
-			# - maybe set isomd5="" in the grub .cfg files?
-			# - this should also fix isos where the filename doesn't change when there is a new release...
-
-			# check if this file has been downloaded...
-			if [ -f $file ]
-			then
-				printf "> name: %-${maxl}s | OK\n" $name
-			else
-				printf "> name: %-${maxl}s " $name
-				read -p "| Download ? [y/N] " download </dev/tty
-				if [ "$download" == "y" ] || [ "$download" == "Y" ]
+				# check if this file has been downloaded...
+				if [ -f $file ]
 				then
-					mkdir -p $(dirname $file)
-					wget_links=("${wget_links[@]}" "-O $file $link")
+					printf "> name: %-${maxl}s | OK\n" $name
+				else
+					printf "> name: %-${maxl}s " $name
+					read -p "| Download ? [y/N] " download </dev/tty
+					if [ "$download" == "y" ] || [ "$download" == "Y" ]
+					then
+						mkdir -p $(dirname $file)
+						wget_links=("${wget_links[@]}" "-O $file $link")
+					fi
 				fi
 			fi
 
