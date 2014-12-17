@@ -4,7 +4,7 @@
 
 # ToDo List
 # ToDo - a way to delete old/previous ISO versions
-# ToDo - remove empty directories from USBISO dir
+# ToDo - check if all inc-*.cfg are used in grub.cfg ?
 
 #
 ## Functions
@@ -101,94 +101,153 @@ done
 
 rsync -a $GLIMDIR/grub2/ $USBDIR/boot/grub2
 
+# remove empty directories from USBISO dir
+for dir in `ls $ISODIR/`
+do
+	if [ -z "`find $ISODIR/$dir -type f`" ]
+	then
+		echo "removing emtpy dir $ISODIR/$dir"
+		rm -r $ISODIR/$dir
+	fi
+done
+
+# copy iso(file|name) in place of ==isocopy==
 for incfile in `ls $GLIMDIR/grub2/inc*\.cfg`
 do
-	# if there is no isolink in $incfile don't even ask about downloading
-	isolinktest=`grep -m1 isolink $incfile`
-	if [ "$isolinktest" == "" ]
-	then
-		continue
-	fi
-
-	read -p "Do you want to download ISO's for '$(echo $incfile|sed s/'.*inc-'/''/|sed s/'.cfg'/''/)'? [y/N] " distro
-	if [ "$distro" != "y" ] && [ "$distro" != "Y" ]
-	then
-		continue
-	fi
-
 	# reset the variables
-	file=""; link=""; name=""
+	file=""; name=""; copy=""
 
 	while read -r line
 	do
 		if [[ "$line" == *isofile=* ]]
 		then
-			file=`echo "$line"|cut -d'"' -f2`
-
-		elif [[ "$line" == *isolink=* ]]
-		then
-			link=`echo "$line"|cut -d'"' -f2`
+			file="$line"
 
 		elif [[ "$line" == *isoname=* ]]
 		then
-			name=`echo "$line"|cut -d'"' -f2`
+			name="$line"
+
+		elif [[ "$line" == *isocopy=* ]]
+		then
+			# this is not really needed except to detect that isocopy exists
+			copy="$line"
 		fi
 
-		# when all file, link and name are found, initiate a download
-		if [ "$file" != "" ] && [ "$link" != "" ] && [ "$name" != "" ]
+		# when all file, link, name and copy are found, copy into copy :)
+		if [ "$file" != "" ] && [ "$name" != "" ] && [ "$copy" != "" ]
 		then
-			# check if file is already in checked list
-			if [ $(contains "${glim_list[@]}" "$file/$link/$name") != "y" ]
-			then
-				# add this file to checked list ( should it be $file, $link or $name ? )
-				glim_list=("${glim_list[@]}" "$file/$link/$name")
+			# build the filename for output
+			outfile=`echo $incfile|sed s:"$GLIMDIR":"$USBDIR/boot/":`
 
-				# replace the ${isoname} and ${isopath} grub-variables
-				file=`echo "$file"|sed s/'${isoname}'/"$name"/g|sed s:'${isopath}':"$ISODIR":g`
-				link=`echo "$link"|sed s/'${isoname}'/"$name"/g`
-
-				# ToDo - check md5 checksum of downloaded file
-				# - how to get the md5 checksum for an iso?
-				# - maybe set isomd5="" in the grub .cfg files?
-				# - this should also fix isos where the filename doesn't change when there is a new release...
-
-				# check if this file has been downloaded...
-				if [ -f $file ]
-				then
-					printf "> name: %-${maxl}s | OK\n" $name
-				else
-					printf "> name: %-${maxl}s " $name
-					read -p "| Download ? [y/N] " download </dev/tty
-					if [ "$download" == "y" ] || [ "$download" == "Y" ]
-					then
-						mkdir -p $(dirname $file)
-						wget_links=("${wget_links[@]}" "-O $file $link")
-					fi
-				fi
-			fi
+			# sed the first occurrence!
+			sed -i "0,/==isocopy/{s:==isocopy==:$name\n$file:}" $outfile
 
 			# reset the variables
-			file=""; link=""; name=""
+			file=""; name=""; copy=""
 		fi
 
-	done < <(grep -E 'iso(file|link|name)=' $incfile | grep -v '#')
-done
-
-for wget_link in "${wget_links[@]}"
-do
-	echo ""
-	echo "$(echo $wget_link|cut -d' ' -f2)"
-	echo "wget $(echo $wget_link|cut -d' ' -f3)"
-	wget --quiet --show-progress $wget_link
+	done < <(grep -E 'iso(file|name|copy)=' $incfile | grep -v '#')
 done
 
 # make sure all changes are written to USB
 sync
 
+# ask if user wants to download more ISO's
+read -p "Do you want to download ISO's? [y/N] " download
+if [ "$download" == "y" ] || [ "$download" == "Y" ]
+then
+	# go through each inc-*.cfg file to look for iso-files to download
+	for incfile in `ls $GLIMDIR/grub2/inc*\.cfg`
+	do
+		# if there is no isolink in $incfile don't even ask about downloading
+		isolinktest=`grep -m1 isolink $incfile`
+		if [ "$isolinktest" == "" ]
+		then
+			continue
+		fi
+
+		read -p "Do you want to download ISO's for '$(echo $incfile|sed s/'.*inc-'/''/|sed s/'.cfg'/''/)'? [y/N] " distro
+		if [ "$distro" != "y" ] && [ "$distro" != "Y" ]
+		then
+			continue
+		fi
+
+		# reset the variables
+		file=""; link=""; name=""
+
+		while read -r line
+		do
+			if [[ "$line" == *isofile=* ]]
+			then
+				file=`echo "$line"|cut -d'"' -f2`
+
+			elif [[ "$line" == *isolink=* ]]
+			then
+				link=`echo "$line"|cut -d'"' -f2`
+
+			elif [[ "$line" == *isoname=* ]]
+			then
+				name=`echo "$line"|cut -d'"' -f2`
+			fi
+
+			# when all file, link and name are found, initiate a download
+			if [ "$file" != "" ] && [ "$link" != "" ] && [ "$name" != "" ]
+			then
+				# check if file is already in checked list
+				if [ $(contains "${glim_list[@]}" "$file/$link/$name") != "y" ]
+				then
+					# add this file to checked list ( should it be $file, $link or $name ? )
+					glim_list=("${glim_list[@]}" "$file/$link/$name")
+
+					# replace the ${isoname} and ${isopath} grub-variables
+					file=`echo "$file"|sed s/'${isoname}'/"$name"/g|sed s:'${isopath}':"$ISODIR":g`
+					link=`echo "$link"|sed s/'${isoname}'/"$name"/g`
+
+					# ToDo - check md5 checksum of downloaded file
+					# - how to get the md5 checksum for an iso?
+					# - maybe set isomd5="" in the grub .cfg files?
+					# - this should also fix isos where the filename doesn't change when there is a new release...
+
+					# check if this file has been downloaded...
+					if [ -f $file ]
+					then
+						printf "> name: %-${maxl}s | OK\n" $name
+					else
+						printf "> name: %-${maxl}s " $name
+						read -p "| Download ? [y/N] " download </dev/tty
+						if [ "$download" == "y" ] || [ "$download" == "Y" ]
+						then
+							mkdir -p $(dirname $file)
+							wget_links=("${wget_links[@]}" "-O $file $link")
+						fi
+					fi
+				fi
+
+				# reset the variables
+				file=""; link=""; name=""
+			fi
+
+		done < <(grep -E 'iso(file|link|name)=' $incfile | grep -v '#')
+	done
+
+	for wget_link in "${wget_links[@]}"
+	do
+		echo ""
+		echo "$(echo $wget_link|cut -d' ' -f2)"
+		echo "wget $(echo $wget_link|cut -d' ' -f3)"
+		wget --quiet --show-progress $wget_link
+	done
+
+	# make sure all changes are written to USB
+	sync
+fi
+
+
 # TinyCoreLinux needs the cde-dir from the iso to be in the usb-root
 name=`grep 'isoname=' $GLIMDIR/grub2/inc-tinycorelinux.cfg | grep -v '#' | cut -d'"' -f2`
 if [ -f $ISODIR/tinycorelinux/$name ] && [ ! -d $USBDIR/cde ]
 then
+	echo ""
 	echo ">> Extracting files from $name"
 	7z x -o$USBDIR $ISODIR/tinycorelinux/$name cde/ >/dev/null
 fi
@@ -197,9 +256,10 @@ fi
 name=`grep 'isoname=' $GLIMDIR/grub2/inc-openelec.cfg | grep -v '#' | cut -d'"' -f2`
 if [ -f $ISODIR/openelec/$name ] && [ ! -f $USBDIR/KERNEL ] && [ ! -f $USBDIR/SYSTEM ]
 then
+	echo ""
 	echo ">> Extracting files from $name"
-	tar -xvf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/KERNEL
-	tar -xvf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/SYSTEM
+	tar -xf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/KERNEL
+	tar -xf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/SYSTEM
 fi
 
 
@@ -230,24 +290,6 @@ if [ ! -f ./boot/iso/menuetos/current.zip ]
 then
 	mkdir -p ./boot/iso/menuetos
 	wget -O ./boot/iso/menuetos/current.zip http://www.menuetos.be/download.php?CurrentMenuetOS
-fi
-
-if [ ! -f ./boot/iso/ipxe/ipxe.iso ]
-then
-	mkdir -p ./boot/iso/ipxe
-	wget -O ./boot/iso/ipxe/ipxe.iso http://boot.ipxe.org/ipxe.iso
-fi
-
-if [ ! -f ./boot/iso/ipxe/boot.rackspace.com-main.iso ]
-then
-	mkdir -p ./boot/iso/ipxe
-	wget -O ./boot/iso/ipxe/boot.rackspace.com-main.iso http://boot.rackspace.com/ipxe/boot.rackspace.com-main.iso
-fi
-
-if [ ! -f ./boot/iso/slitaz/slitaz-5.0-rc2.iso ]
-then
-	mkdir -p ./boot/iso/slitaz
-	wget -O ./boot/iso/slitaz/slitaz-5.0-rc2.iso http://mirror.slitaz.org/iso/5.0/slitaz-5.0-rc2.iso
 fi
 
 if [ ! -f ./boot/iso/webconverger/latest.iso ]
