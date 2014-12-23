@@ -5,6 +5,9 @@
 # ToDo List
 # ToDo - a way to delete old/previous ISO versions
 # ToDo - check if all inc-*.cfg are used in grub.cfg ?
+# ToDo - add opensuse, mageia, Sabayon
+#http://software.opensuse.org/132/nl
+#https://www.mageia.org/nl/downloads/
 
 #
 ## Functions
@@ -260,6 +263,11 @@ then
 	echo ">> Extracting files from $name"
 	tar -xf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/KERNEL
 	tar -xf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/SYSTEM
+	# ToDo - ask if user wants to create this persistence file
+	# ToDo - use a persistence file, currently not working...
+	#echo ">> create 512M STORAGE-file"
+	#dd if=/dev/zero of=$USBDIR/STORAGE bs=1M count=512
+	#mkfs.ext2 $USBDIR/STORAGE
 fi
 
 
