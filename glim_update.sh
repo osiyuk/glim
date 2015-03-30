@@ -61,12 +61,26 @@ then
 
 	ISODIR="$USBDIR/boot/iso"
 
+	if [ $(which dialog) == "" ]
+	then
+		GLIMDIALOG="0"
+	else
+		read -e -p "Use DIALOG [Y/n]: " usedialog </dev/tty
+		if [ "$usedialog" != "n" ] && [ "$usedialog" != "N" ]
+		then
+			GLIMDIALOG="1"
+		else
+			GLIMDIALOG="0"
+		fi
+	fi
+
 	# ToDo - remove trailing slash ? (not needed but looks better..)
 
 	echo "# glim_update config" > ./glim_update.conf
 	echo "GLIMDIR=$GLIMDIR" >> ./glim_update.conf
 	echo "USBDIR=$USBDIR" >> ./glim_update.conf
 	echo "ISODIR=$ISODIR" >> ./glim_update.conf
+	echo "GLIMDIALOG=\"$GLIMDIALOG\"" >> ./glim_update.conf
 else
 	. ./glim_update.conf
 fi
@@ -85,6 +99,16 @@ fi
 if [ ! -d $ISODIR ]
 then
 	mkdir -p $ISODIR
+fi
+if [ "$GLIMDIALOG" == "" ]
+then
+	echo "GLIMDIALOG not defined, run '$0 -c' to reconfigure"
+	exit
+fi
+if [ "$GLIMDIALOG" != "0" ] && [ "$GLIMDIALOG" != "1" ]
+then
+	echo "GLIMDIALOG wrongly configured [$GLIMDIALOG] run '$0 -c' to reconfigure"
+	exit
 fi
 
 # find the longest iso name
@@ -163,6 +187,17 @@ sync
 read -p "Do you want to download ISO's? [y/N] " download
 if [ "$download" == "y" ] || [ "$download" == "Y" ]
 then
+	if [ "$GLIMDIALOG" == "1" ]
+	then
+		# get screen width+height
+		dh=`tput lines`
+		dw=`tput cols`
+		let dh=dh-5
+		let dw=dw-10
+		# setup basic Dialog-Command
+		dialog_cmd=(dialog --keep-tite --backtitle "GRUB2 Live ISO Multiboot" --checklist "GRUB2 Live ISO Multiboot - Choose" $dh $dw $dh)
+	fi
+
 	# go through each inc-*.cfg file to look for iso-files to download
 	for incfile in `ls $GLIMDIR/grub2/inc*\.cfg`
 	do
@@ -173,14 +208,52 @@ then
 			continue
 		fi
 
-		read -p "Do you want to download ISO's for '$(echo $incfile|sed s/'.*inc-'/''/|sed s/'.cfg'/''/)'? [y/N] " distro
-		if [ "$distro" != "y" ] && [ "$distro" != "Y" ]
+		distro=$(echo $incfile|sed s/'.*inc-'/''/|sed s/'.cfg'/''/)
+
+		if [ "$GLIMDIALOG" == "1" ]
 		then
-			continue
+			active="off"
+			# if there is an iso in the dir mark as active
+			if [ -d $ISODIR/$distro/ ]
+			then
+				if [ "$(ls $ISODIR/$distro/|grep '\.iso')" != "" ]; then
+					active="on"
+				fi
+				# OpenELEC does not have .iso file
+				if [ "$(ls $ISODIR/$distro/|grep '\.tar')" != "" ]; then
+					active="on"
+				fi
+			fi
+			distros=("${distros[@]}" "$distro" "" "$active")
+		else
+			read -p "Do you want to download ISO's for '$distro'? [y/N] " distrod
+			if [ "$distrod" != "y" ] && [ "$distrod" != "Y" ]
+			then
+				continue
+			fi
+			choices=("${choices[@]}" "$distro")
 		fi
+
+	done
+
+	if [ "$GLIMDIALOG" == "1" ]; then
+		choices=$("${dialog_cmd[@]}" "${distros[@]}" 2>&1 >/dev/tty)
+	fi
+
+	for choice in ${choices[@]}
+	do
+		incfile=$GLIMDIR/grub2/inc-$choice.cfg
+		isos=()
+		index=0
+		index_wget=""
 
 		# reset the variables
 		file=""; link=""; name=""
+
+		if [ "$GLIMDIALOG" == "0" ]
+		then
+			echo "| $choice"
+		fi
 
 		while read -r line
 		do
@@ -216,16 +289,28 @@ then
 					# - this should also fix isos where the filename doesn't change when there is a new release...
 
 					# check if this file has been downloaded...
-					if [ -f $file ]
+					if [ "$GLIMDIALOG" == "1" ]
 					then
-						printf "> name: %-${maxl}s | OK\n" $name
-					else
-						printf "> name: %-${maxl}s " $name
-						read -p "| Download ? [y/N] " download </dev/tty
-						if [ "$download" == "y" ] || [ "$download" == "Y" ]
+						active="off"
+						if [ -f $file ]
 						then
-							mkdir -p $(dirname $file)
-							wget_links=("${wget_links[@]}" "-O $file $link")
+							active="on"
+						fi
+						let "index++"
+						index_wget[$index]="-O $file $link"
+						isos=("${isos[@]}" "$index" "$name" "$active")
+					else
+						if [ -f $file ]
+						then
+							printf "> name: %-${maxl}s | OK\n" $name
+						else
+							printf "> name: %-${maxl}s " $name
+							read -p "| Download ? [y/N] " download </dev/tty
+							if [ "$download" == "y" ] || [ "$download" == "Y" ]
+							then
+								mkdir -p $(dirname $file)
+								wget_links=("${wget_links[@]}" "-O $file $link")
+							fi
 						fi
 					fi
 				fi
@@ -235,13 +320,34 @@ then
 			fi
 
 		done < <(grep -E 'iso(file|link|name)=' $incfile | grep -v '#')
+
+		if [ "$GLIMDIALOG" == "1" ]
+		then
+			downloads=$("${dialog_cmd[@]}" "${isos[@]}" 2>&1 >/dev/tty)
+			for download in $downloads
+			do
+				wget_links=("${wget_links[@]}" "${index_wget[$download]}")
+			done
+		fi
+
 	done
 
 	for wget_link in "${wget_links[@]}"
 	do
+		file=$(echo $wget_link|cut -d' ' -f2)
+		link=$(echo $wget_link|cut -d' ' -f3)
+
+		# check if already downloaded
+		if [ -f $file ]
+		then
+			continue
+		fi
+
 		echo ""
-		echo "$(echo $wget_link|cut -d' ' -f2)"
-		echo "wget $(echo $wget_link|cut -d' ' -f3)"
+		echo "$file"
+		echo "wget $link"
+
+		mkdir -p $(dirname $file)
 		wget --quiet --show-progress $wget_link
 	done
 
