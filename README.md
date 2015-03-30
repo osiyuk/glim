@@ -35,7 +35,7 @@ Screenshots
 Installation
 ------------
 
-Setting up GRUB require you to be root, while the rest doesn't.
+Setting up GRUB requires you to be root, while the rest doesn't.
 
 Set the `USBMNT` variable so that copy/pasting examples will work
 (replace `/mnt` and `sdb` with the appropriate values) :
@@ -107,6 +107,12 @@ Note that on 32bit computers, all 64bit entries will be automatically hidden.
 Special Cases
 -------------
 
+### Arch and ArchBang
+
+Arch needs to know the partition on which the iso is located this is difficult
+when using /dev/sdx1 so the partition-label is used for this
+ * The FAT filesystem's label must be 'GLIM'
+
 ### Red Hat Enterprise Linux
 
 RHEL isn't "live" as such. And in order for the install to work, you need to
@@ -115,15 +121,12 @@ only "install.img" and "product.img".
 
 ### OpenELEC
 
-OpenELEC isn't provided as ISO images, not is it able to find the `KERNEL` and
+OpenELEC isn't provided as ISO images, nor is it able to find the `KERNEL` and
 `SYSTEM` files it needs anywhere else than at the root of a filesystem.
-But it's useful to enable booting the OpenELEC installer by just copying both
-files from any single version (ION, Intel, Fusion, Generic, etc.) to the root
-of the USB memory stick, instead of first having to create a new separate USB
-memory just to run the installer.
-As of OpenELEC 3.0, Live booting is also supported, but :
+
+It's possible to Live-Boot OpenELEC, but it needs 2 partitions
  * The FAT filesystem's label must be 'GLIM'
- * The first launch will create a 512MB file as /STORAGE
+ * The second partition's filesystem label must be GLIM_DATA
 This can be tweaked as needed by editing inc-openelec.cfg.
 
 Testing
@@ -155,4 +158,3 @@ The terminal_box_*.png files are CC-BY-SA-3.0 and come from the GRUB2 starfield
 theme by Daniel Tschudi.
 The ascii.pf2 font comes from GRUB, which is GPLv3+ licensed. For more details 
 as well as the source code, see http://www.gnu.org/software/grub/
-
