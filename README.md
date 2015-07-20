@@ -158,3 +158,4 @@ The terminal_box_*.png files are CC-BY-SA-3.0 and come from the GRUB2 starfield
 theme by Daniel Tschudi.
 The ascii.pf2 font comes from GRUB, which is GPLv3+ licensed. For more details 
 as well as the source code, see http://www.gnu.org/software/grub/
+
