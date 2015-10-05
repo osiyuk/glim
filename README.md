@@ -126,7 +126,7 @@ OpenELEC isn't provided as ISO images, nor is it able to find the `KERNEL` and
 
 It's possible to Live-Boot OpenELEC, but it needs 2 partitions
  * The FAT filesystem's label must be 'GLIM'
- * The second partition's filesystem label must be GLIM_DATA
+ * The second partition's filesystem label must be GLIMDATA
 This can be tweaked as needed by editing inc-openelec.cfg.
 
 Testing

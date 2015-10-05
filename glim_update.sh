@@ -9,6 +9,9 @@
 #http://software.opensuse.org/132/nl
 #https://www.mageia.org/nl/downloads/
 # ToDo ? setup GRUB on the usb-stick
+#   - make partitions GLIM and GLIMDATA
+#
+#   - setup variables for grub install
 #   export USBMNT=/run/media/username/GLIM/
 #   export USBDEV=sdb
 #   sudo grub2-install --boot-directory=${USBMNT:-/mnt}/boot /dev/${USBDEV}
@@ -183,21 +186,265 @@ done
 # make sure all changes are written to USB
 sync
 
+# setup basic Dialog-Command
+if [ "$GLIMDIALOG" == "1" ]
+then
+	# get screen width+height
+	dh=`tput lines`
+	dw=`tput cols`
+	let dh=dh-5
+	let dw=dw-10
+	dialog_cmd=(dialog --keep-tite --backtitle "GRUB2 Live ISO Multiboot" --checklist "GRUB2 Live ISO Multiboot - Choose" $dh $dw $dh)
+fi
+
+# check for outdated iso- and tar-files
+for isofile in `find $ISODIR/ -type f \( -name "*.iso" -or -name "*.tar" \) `
+do
+	isoname=$(basename $isofile)
+	exists=$(grep -ri $isoname ./grub2/inc*.cfg)
+	if [ "$exists" == "" ]
+	then
+		outdated_exists="1"
+		echo "this file is outdated: $(echo "$(basename $(dirname $isofile))/$(basename $isofile)")"
+	fi
+done
+if [ "$outdated_exists" == "1" ]
+then
+	read -p "Do you want to delete the outdated ISO's? [y/N] " deleteoutdated
+	if [ "$deleteoutdated" == "y" ] || [ "$deleteoutdated" == "Y" ]
+	then
+		for isofile in `find $ISODIR/ -type f \( -name "*.iso" -or -name "*.tar" \) `
+		do
+			isoname=$(basename $isofile)
+			exists=$(grep -ri $isoname ./grub2/inc*.cfg)
+			if [ "$exists" == "" ]
+			then
+				deletefile="$isofile"
+				rm $deletefile
+				deletemd5file="$deletefile.md5"
+				if [ -f $deletemd5file ]
+				then
+					rm $deletemd5file
+				fi
+			fi
+		done
+	fi
+fi
+
+# check for broken isos
+read -p "Do you want to check for broken ISO links? [y/N] " checkbroken
+if [ "$checkbroken" == "y" ] || [ "$checkbroken" == "Y" ]
+then
+	for incfile in `ls $GLIMDIR/grub2/inc*\.cfg`
+	do
+		# reset the variables
+		file=""; link=""; name=""
+
+		while read -r line
+		do
+			if [[ "$line" == *isofile=* ]]
+			then
+				file=`echo "$line"|cut -d'"' -f2`
+
+			elif [[ "$line" == *isolink=* ]]
+			then
+				link=`echo "$line"|cut -d'"' -f2`
+
+			elif [[ "$line" == *isoname=* ]]
+			then
+				name=`echo "$line"|cut -d'"' -f2`
+			fi
+
+			# when all file, link and name are found, try to download md5
+			if [ "$file" != "" ] && [ "$link" != "" ] && [ "$name" != "" ]
+			then
+				# replace the ${isoname} and ${isopath} grub-variables
+				file=`echo "$file"|sed s/'${isoname}'/"$name"/g|sed s:'${isopath}':"$ISODIR":g`
+				link=`echo "$link"|sed s/'${isoname}'/"$name"/g`
+
+#				echo "link: $link"
+				checkexists=$(wget -q --spider $link && echo true || echo false)
+				if [[ "$checkexists" == "false" ]]
+				then
+					echo "outdated: $incfile -> $link"
+				fi
+
+				# reset the variables
+				file=""; link=""; name=""
+			fi
+
+		done < <(grep -E 'iso(file|link|name)=' $incfile | grep -v '#')
+	done
+fi
+
+exit
+
+
+
+# check md5's
+# ToDo - maybe cache the md5's on disk instead of recalculating every time
+read -p "Do you want to check the md5sums for your downloaded ISO's? [y/N] " checkmd5
+if [ "$checkmd5" == "y" ] || [ "$checkmd5" == "Y" ]
+then
+	for incfile in `ls $GLIMDIR/grub2/inc*\.cfg`
+	do
+		# reset the variables
+		file=""; link=""; name=""
+
+		while read -r line
+		do
+			if [[ "$line" == *isofile=* ]]
+			then
+				file=`echo "$line"|cut -d'"' -f2`
+
+			elif [[ "$line" == *isolink=* ]]
+			then
+				link=`echo "$line"|cut -d'"' -f2`
+
+			elif [[ "$line" == *isoname=* ]]
+			then
+				name=`echo "$line"|cut -d'"' -f2`
+			fi
+
+			# when all file, link and name are found, try to download md5
+			if [ "$file" != "" ] && [ "$link" != "" ] && [ "$name" != "" ]
+			then
+				# replace the ${isoname} and ${isopath} grub-variables
+				file=`echo "$file"|sed s/'${isoname}'/"$name"/g|sed s:'${isopath}':"$ISODIR":g`
+				link=`echo "$link"|sed s/'${isoname}'/"$name"/g`
+
+				if [ -f $file ]
+				then
+					md5link1="$link.md5"
+					md5link2="$link.md5.txt"
+					md5link3="${link%.*}.md5"
+					md5link4="$(dirname $link)/MD5SUM"
+					md5link5="$(dirname $link)/MD5SUMS"
+					md5link6="$(dirname $link)/md5sums.txt"
+					if [[ $name == *i486* ]]
+					then
+						md5link7="$(dirname $link)/latest-i486.inf"
+					else
+						md5link7="$(dirname $link)/latest-x86_64.inf"
+					fi
+
+					md5found="0"
+					for i in {1..7}
+					do
+						eval md5link="\$md5link$i"
+	#					echo $md5link
+						wget --quiet -O /tmp/glim_update.temp.md5 $md5link
+						wgetreturn=$?
+						if [[ $wgetreturn -eq 0 ]]
+						then
+							md5found="1"
+							break
+						fi
+					done
+
+					if [ "$md5found" == "1" ]
+					then
+						dl_md5=$(cat /tmp/glim_update.temp.md5 | grep "$name\$" | awk '{ print $1 }')
+						if [[ $dl_md5 == *$name* ]]
+						then
+							dl_md5=$(cat /tmp/glim_update.temp.md5 | grep "MD5SUM" | cut -d"=" -f2)
+						fi
+
+						curmd5=$(md5sum $file | awk '{ print $1 }')
+
+						if [ "$curmd5" != "$dl_md5" ]
+						then
+							echo "$(basename $(dirname $file))/$(basename $file)"
+							echo "file checksum is wrong"
+	#						echo "cur: $curmd5"
+	#						echo "dl_: $dl_md5"
+	#						cat /tmp/glim_update.temp.md5
+							echo ""
+
+							redownloads=("${redownloads[@]}" "-O $file $link")
+						fi
+	#				else
+	#					echo "$(basename $(dirname $file))/$(basename $file)"
+	#					echo "couldn't find md5"
+	#					echo $(dirname $link)
+	#					echo ""
+					fi
+				fi
+
+				# reset the variables
+				file=""; link=""; name=""
+			fi
+
+		done < <(grep -E 'iso(file|link|name)=' $incfile | grep -v '#')
+	done
+
+	# Redownloads
+	for redownload in "${redownloads[@]}"
+	do
+		file=$(echo $redownload|awk '{ print $2 }')
+
+		#read -p "Do you want to re-download? [Y/n] " redown
+		#if [ "$redown" != "n" ] && [ "$redown" != "N" ]
+		#then
+		#	wget --quiet --show-progress $redownload
+		#fi
+
+		read -p "Do you want to re-download $(basename $(dirname $file))/$(basename $file)? [y/N] " redown
+		if [ "$redown" == "y" ] || [ "$redown" == "Y" ]
+		then
+			doredownloads=("${doredownloads[@]}" "$redownload")
+		fi
+	done
+	for redownload in "${doredownloads[@]}"
+	do
+		file=$(echo $redownload|awk '{ print $2 }')
+		echo "$(basename $(dirname $file))/$(basename $file)"
+		wget --quiet --show-progress $redownload
+	done
+fi
+
+# ask if user wants to delete ISO's
+read -p "Do you want to delete ISO's? [y/N] " delete
+if [ "$delete" == "y" ] || [ "$delete" == "Y" ]
+then
+	# go through each folder to look for iso- and tar-files to delete
+	for incfile in `find $ISODIR/ -type f \( -name "*.iso" -or -name "*.tar" \) `
+	do
+		# echo "incfile: $incfile"
+		isofile=$(echo "$(basename $(dirname $incfile))/$(basename $incfile)")
+		# echo "isofile: $isofile"
+
+		if [ "$GLIMDIALOG" == "1" ]
+		then
+			deletefiles=("${deletefiles[@]}" "$incfile" "" "off")
+		else
+			read -p "Delete '$isofile'? [y/N] " isodelete
+			if [ "$isodelete" == "y" ] || [ "$isodelete" == "Y" ]
+			then
+				deletes=("${deletes[@]}" "$incfile")
+			fi
+		fi
+	done
+
+	if [ "$GLIMDIALOG" == "1" ]; then
+		deletes=$("${dialog_cmd[@]}" "${deletefiles[@]}" 2>&1 >/dev/tty)
+	fi
+
+	for deletefile in ${deletes[@]}
+	do
+		rm $deletefile
+		deletemd5file="$deletefile.md5"
+		if [ -f $deletemd5file ]
+		then
+			rm $deletemd5file
+		fi
+	done
+fi
+
 # ask if user wants to download more ISO's
 read -p "Do you want to download ISO's? [y/N] " download
 if [ "$download" == "y" ] || [ "$download" == "Y" ]
 then
-	if [ "$GLIMDIALOG" == "1" ]
-	then
-		# get screen width+height
-		dh=`tput lines`
-		dw=`tput cols`
-		let dh=dh-5
-		let dw=dw-10
-		# setup basic Dialog-Command
-		dialog_cmd=(dialog --keep-tite --backtitle "GRUB2 Live ISO Multiboot" --checklist "GRUB2 Live ISO Multiboot - Choose" $dh $dw $dh)
-	fi
-
 	# go through each inc-*.cfg file to look for iso-files to download
 	for incfile in `ls $GLIMDIR/grub2/inc*\.cfg`
 	do
@@ -349,6 +596,13 @@ then
 
 		mkdir -p $(dirname $file)
 		wget --quiet --show-progress $wget_link
+
+		# ToDo - check if download went OK..
+		wgetreturn=$?
+		if [[ $wgetreturn -ne 0 ]]
+		then
+			echo "download failed!"
+		fi
 	done
 
 	# make sure all changes are written to USB
@@ -356,13 +610,20 @@ then
 fi
 
 
-# TinyCoreLinux needs the cde-dir from the iso to be in the usb-root
+
+# TinyCoreLinux needs cde-dir in the usb-root
 name=`grep 'isoname=' $GLIMDIR/grub2/inc-tinycorelinux.cfg | grep -v '#' | cut -d'"' -f2`
 if [ -f $ISODIR/tinycorelinux/$name ] && [ ! -d $USBDIR/cde ]
 then
 	echo ""
 	echo ">> Extracting files from $name"
 	7z x -o$USBDIR $ISODIR/tinycorelinux/$name cde/ >/dev/null
+fi
+if [ ! -f $ISODIR/tinycorelinux/$name ] && [ -d $USBDIR/cde ]
+then
+	echo ""
+	echo ">> TinyCoreLinux has no ISO anymore, deleting /cde directory"
+	rm -r $USBDIR/cde
 fi
 
 # OpenELEC needs KERNEL and SYSTEM in the usb-root
@@ -374,9 +635,18 @@ then
 	tar -xf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/KERNEL
 	tar -xf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/SYSTEM
 fi
+if [ ! -f $ISODIR/openelec/$name ] && [ -f $USBDIR/KERNEL ] && [ -f $USBDIR/SYSTEM ]
+then
+	echo ""
+	echo ">> OpenELEC has no TAR anymore, deleting /KERNEL and /SYSTEM files"
+	rm $USBDIR/KERNEL
+	rm $USBDIR/SYSTEM
+fi
+
 
 
 exit
+
 
 
 # ToDo - unpacking etc.
