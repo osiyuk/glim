@@ -277,10 +277,6 @@ then
 	done
 fi
 
-exit
-
-
-
 # check md5's
 # ToDo - maybe cache the md5's on disk instead of recalculating every time
 read -p "Do you want to check the md5sums for your downloaded ISO's? [y/N] " checkmd5
