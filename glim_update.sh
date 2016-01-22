@@ -323,9 +323,10 @@ then
 					else
 						md5link7="$(dirname $link)/latest-x86_64.inf"
 					fi
+					md5link8="$(dirname $link)/iso-checksums.txt"
 
 					md5found="0"
-					for i in {1..7}
+					for i in {1..8}
 					do
 						eval md5link="\$md5link$i"
 	#					echo $md5link
@@ -344,6 +345,10 @@ then
 						if [[ $dl_md5 == *$name* ]]
 						then
 							dl_md5=$(cat /tmp/glim_update.temp.md5 | grep "MD5SUM" | cut -d"=" -f2)
+						fi
+						if [[ $dl_md5 == sha256:*md5: ]]
+						then
+							dl_md5=$(cat /tmp/glim_update.temp.md5 | grep 'md5:' | grep "$name\$" | awk '{ print $2 }')
 						fi
 
 						curmd5=$(md5sum $file | awk '{ print $1 }')
