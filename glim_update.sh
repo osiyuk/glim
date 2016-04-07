@@ -12,7 +12,7 @@
 #   - make partitions GLIM and GLIMDATA
 #
 #   - setup variables for grub install
-#   export USBMNT=/run/media/username/GLIM/
+#   export USBMNT=/run/media/${USER}/GLIM/
 #   export USBDEV=sdb
 #   sudo grub2-install --boot-directory=${USBMNT:-/mnt}/boot /dev/${USBDEV}
 
