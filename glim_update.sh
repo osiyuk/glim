@@ -613,14 +613,25 @@ fi
 
 
 # TinyCoreLinux needs cde-dir in the usb-root
-name=`grep 'isoname=' $GLIMDIR/grub2/inc-tinycorelinux.cfg | grep -v '#' | cut -d'"' -f2`
-if [ -f $ISODIR/tinycorelinux/$name ] && [ ! -d $USBDIR/cde ]
+name_tmp=`grep 'isoname=' $GLIMDIR/grub2/inc-tinycorelinux.cfg | grep -v '#' | cut -d'"' -f2`
+while read -r line; do
+	if [ "$name" == "" ]
+	then
+		name=$line
+	fi
+
+	if [ -f "$ISODIR/tinycorelinux/$line" ]
+	then
+		name=$line
+	fi
+done <<< "$name_tmp"
+if [ -f "$ISODIR/tinycorelinux/$name" ] && [ ! -d $USBDIR/cde ]
 then
 	echo ""
 	echo ">> Extracting files from $name"
 	7z x -o$USBDIR $ISODIR/tinycorelinux/$name cde/ >/dev/null
 fi
-if [ ! -f $ISODIR/tinycorelinux/$name ] && [ -d $USBDIR/cde ]
+if [ ! -f "$ISODIR/tinycorelinux/$name" ] && [ -d $USBDIR/cde ]
 then
 	echo ""
 	echo ">> TinyCoreLinux has no ISO anymore, deleting /cde directory"
@@ -628,15 +639,26 @@ then
 fi
 
 # OpenELEC needs KERNEL and SYSTEM in the usb-root
-name=`grep 'isoname=' $GLIMDIR/grub2/inc-openelec.cfg | grep -v '#' | cut -d'"' -f2`
-if [ -f $ISODIR/openelec/$name ] && [ ! -f $USBDIR/KERNEL ] && [ ! -f $USBDIR/SYSTEM ]
+name_tmp=`grep 'isoname=' $GLIMDIR/grub2/inc-openelec.cfg | grep -v '#' | cut -d'"' -f2`
+while read -r line; do
+	if [ "$name" == "" ]
+	then
+		name=$line
+	fi
+
+	if [ -f "$ISODIR/openelec/$line" ]
+	then
+		name=$line
+	fi
+done <<< "$name_tmp"
+if [ -f "$ISODIR/openelec/$name" ] && [ ! -f $USBDIR/KERNEL ] && [ ! -f $USBDIR/SYSTEM ]
 then
 	echo ""
 	echo ">> Extracting files from $name"
 	tar -xf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/KERNEL
 	tar -xf $ISODIR/openelec/$name --strip-components=2 -C $USBDIR $(echo "$name"|sed s/"\.tar"/""/)/target/SYSTEM
 fi
-if [ ! -f $ISODIR/openelec/$name ] && [ -f $USBDIR/KERNEL ] && [ -f $USBDIR/SYSTEM ]
+if [ ! -f "$ISODIR/openelec/$name" ] && [ -f $USBDIR/KERNEL ] && [ -f $USBDIR/SYSTEM ]
 then
 	echo ""
 	echo ">> OpenELEC has no TAR anymore, deleting /KERNEL and /SYSTEM files"
