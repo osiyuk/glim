@@ -1,6 +1,8 @@
 GRUB2 Live ISO Multiboot
 ========================
 
+My adjustments are not yet ready for use, follow the below links to test this for yourself:
+
 http://github.com/thias/glim | http://glee.thias.es/GLIM
 
 Overview
