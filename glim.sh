@@ -2,6 +2,7 @@
 #
 # BASH. It's what I know best, sorry.
 #
+set -x
 
 # Check that we are *NOT* running as root
 if [[ `id -u` -eq 0 ]]; then
@@ -105,9 +106,9 @@ fi
 if [[ $EFI == true && ! -d /usr/lib/grub/x86_64-efi ]]; then
   if [[ $BIOS == false ]]; then
     echo "ERROR: neither support for BIOS or EFI was found"
+    exit 1
   else
     echo "WARNING: no /usr/lib/grub/x86_64-efi dir (grub2-efi-modules rpm missing?), skipping"
-    exit 1
   fi
 fi
 
