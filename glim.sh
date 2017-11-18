@@ -48,7 +48,11 @@ fi
 echo "Found partition with label 'GLIM' : ${USBDEV1}"
 
 # Sanity check : our partition is the first and only one on the block device
-USBDEV=${USBDEV1%1}
+if echo "$USBDEV1" | grep -q mmcblk; then   # handle /dev/mmcblk0p1 -> /dev/mmcblk0
+    USBDEV=${USBDEV1%p1}
+else
+    USBDEV=${USBDEV1%1}
+fi
 if [[ ! -b "$USBDEV" ]]; then
   echo "ERROR: ${USBDEV} block device not found."
   exit 1
