@@ -105,6 +105,8 @@ echo "$CMD_PREFIX aria2c --dir ${USBMNT}/boot/iso/bodhi -x2 -c $GPARTED_URL" >> 
 echo "$CMD_PREFIX aria2c --dir ${USBMNT}/boot/iso/kali --seed-time=1 --seed-ratio=1.0 -c --follow-torrent=mem $KALI_TORRENT" >> $TMP/parallel-dl.sh
 echo "$CMD_PREFIX aria2c --dir ${USBMNT}/boot/iso/tails --seed-time=1 --seed-ratio=1.0 -c --follow-torrent=mem $TAILS_TORRENT" >> $TMP/parallel-dl.sh
 
+shuf -o $TMP/parallel-dl.shuf $TMP/parallel-dl.sh
+mv $TMP/parallel-dl.shuf $TMP/parallel-dl.sh
 cat $TMP/parallel-dl.sh
 
 if [[ "$PARALLEL_JOBS" -gt "1" ]] ; then
