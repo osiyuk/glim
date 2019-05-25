@@ -91,6 +91,9 @@ $CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/kali
 $CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/tails
 $CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/endian
 
+cd ${USBMNT}/boot/iso
+find .  -iname '*.aria2' | xargs -n1 -I% sudo rm %
+
 # prep downloads
 echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu/xenial $UBUNTU_1604_MINI_URL" >> $TMP/parallel-dl.sh
 echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu/bionic $UBUNTU_1804_MINI_URL" >> $TMP/parallel-dl.sh
@@ -137,10 +140,3 @@ fi
 
 rm $TMP/parallel-dl.sh
 rmdir $TMP
-
-cd ${USBMNT}/boot/iso/centos
-find . -iname '*.iso' | xargs -n1 -I% ln -s % ./
-cd ${USBMNT}/boot/iso/ubuntu
-ln -s bionic/mini.iso ./
-cd ${USBMNT}/boot/iso/kali
-find . -iname '*.iso' | xargs -n1 -I% ln -s % ./
