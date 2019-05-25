@@ -36,6 +36,7 @@ GPARTED_URL='https://sourceforge.net/projects/gparted/files/gparted-live-stable/
 KALI_TORRENT='https://images.offensive-security.com/kali-linux-2019.2-amd64.iso.torrent'
 TAILS_TORRENT='https://tails.boum.org/torrents/files/tails-amd64-3.14.iso.torrent'
 SYSRESCUECD_URL='https://osdn.net/frs/redir.php?m=xtom_us&f=%2Fstorage%2Fg%2Fs%2Fsy%2Fsystemrescuecd%2Freleases%2F6.0.3%2Fsystemrescuecd-6.0.3.iso'
+ENDIAN_URL='https://downloads.sourceforge.net/project/efw/Development/EFW-3.3.0/efw_community-x64_3.3.0_recovery_softwarex86-64_20181026164637.iso?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fefw%2Ffiles%2FDevelopment%2FEFW-3.3.0%2Fefw_community-x64_3.3.0_recovery_softwarex86-64_20181026164637.iso%2Fdownload&ts=1558804920 https://sourceforge.net/projects/efw/files/Development/EFW-3.3.0/efw_community-x64_3.3.0_recovery_softwarex86-64_20181026164637.iso/download#'
 THIS_CWD=$(pwd)
 
 check_cmd () {
@@ -75,7 +76,10 @@ check_cmd parallel
 
 TMP=$(mktemp -d --suffix='.glim.dl.tmp' 2>/dev/null || mktemp -d -t '.glim.dl.tmp')
 
-$CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/ubuntu
+$CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/ubuntu/xenial
+$CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/ubuntu/bionic
+$CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/ubuntu/cosmic
+$CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/ubuntu/disco
 $CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/centos
 $CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/arch
 $CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/antix
@@ -85,12 +89,13 @@ $CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/gparted
 $CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/bodhi
 $CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/kali
 $CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/tails
+$CMD_PREFIX mkdir -p ${USBMNT}/boot/iso/endian
 
 # prep downloads
-echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu $UBUNTU_1604_MINI_URL" >> $TMP/parallel-dl.sh
-echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu $UBUNTU_1804_MINI_URL" >> $TMP/parallel-dl.sh
-echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu $UBUNTU_1810_MINI_URL" >> $TMP/parallel-dl.sh
-echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu $UBUNTU_1904_MINI_URL" >> $TMP/parallel-dl.sh
+echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu/xenial $UBUNTU_1604_MINI_URL" >> $TMP/parallel-dl.sh
+echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu/bionic $UBUNTU_1804_MINI_URL" >> $TMP/parallel-dl.sh
+echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu/cosmic $UBUNTU_1810_MINI_URL" >> $TMP/parallel-dl.sh
+echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu/disco $UBUNTU_1904_MINI_URL" >> $TMP/parallel-dl.sh
 #echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu $UBUNTU_1804_ISO_URL" >> $TMP/parallel-dl.sh
 #echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu $UBUNTU_1804_SERVER_ISO_URL" >> $TMP/parallel-dl.sh
 #echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/ubuntu $UBUNTU_1810_ISO_URL" >> $TMP/parallel-dl.sh
@@ -118,6 +123,7 @@ echo "$CMD_PREFIX aria2c --dir ${USBMNT}/boot/iso/bodhi --seed-time=1 --seed-rat
 echo "$CMD_PREFIX aria2c --dir ${USBMNT}/boot/iso/gparted -x2 -c $GPARTED_URL" >> $TMP/parallel-dl.sh
 echo "$CMD_PREFIX aria2c --dir ${USBMNT}/boot/iso/kali --seed-time=1 --seed-ratio=1.0 -c --follow-torrent=mem $KALI_TORRENT" >> $TMP/parallel-dl.sh
 echo "$CMD_PREFIX aria2c --dir ${USBMNT}/boot/iso/tails --seed-time=1 --seed-ratio=1.0 -c --follow-torrent=mem $TAILS_TORRENT" >> $TMP/parallel-dl.sh
+echo "$CMD_PREFIX aria2c -x2 -c --dir ${USBMNT}/boot/iso/endian $ENDIAN_URL" >> $TMP/parallel-dl.sh
 
 shuf -o $TMP/parallel-dl.shuf $TMP/parallel-dl.sh
 mv $TMP/parallel-dl.shuf $TMP/parallel-dl.sh
@@ -133,4 +139,8 @@ rm $TMP/parallel-dl.sh
 rmdir $TMP
 
 cd ${USBMNT}/boot/iso/centos
-ln -s CentOS*/*.iso
+find . -iname '*.iso' | xargs -n1 -I% ln -s % ./
+cd ${USBMNT}/boot/iso/ubuntu
+ln -s bionic/mini.iso ./
+cd ${USBMNT}/boot/iso/kali
+find . -iname '*.iso' | xargs -n1 -I% ln -s % ./
