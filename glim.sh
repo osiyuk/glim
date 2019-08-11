@@ -101,9 +101,9 @@ fi
 if [[ $EFI == true && ! -d /usr/lib/grub/x86_64-efi ]]; then
   if [[ $BIOS == false ]]; then
     echo "ERROR: neither support for BIOS or EFI was found"
-  else
-    echo "WARNING: no /usr/lib/grub/x86_64-efi dir (grub2-efi-modules rpm missing?), skipping"
     exit 1
+  else
+    echo "WARNING: no /usr/lib/grub/x86_64-efi dir (grub2-efi-x64-modules rpm missing?)"
   fi
 fi
 
@@ -149,8 +149,8 @@ else
 fi
 
 # Copy GRUB2 configuration
-echo "Running rsync -rpt --delete --exclude=i386-pc --exclude=x86_64-efi --exclude=icons/originals ${GRUB2_CONF}/ ${USBMNT}/boot/${GRUB2_DIR} ..."
-${CMD_PREFIX} rsync -rpt --delete --exclude=i386-pc --exclude=x86_64-efi --exclude=icons/originals ${GRUB2_CONF}/ ${USBMNT}/boot/${GRUB2_DIR}
+echo "Running rsync -rpt --delete --exclude=i386-pc --exclude=x86_64-efi --exclude=fonts --exclude=icons/originals ${GRUB2_CONF}/ ${USBMNT}/boot/${GRUB2_DIR} ..."
+${CMD_PREFIX} rsync -rpt --delete --exclude=i386-pc --exclude=x86_64-efi --exclude=fonts --exclude=icons/originals ${GRUB2_CONF}/ ${USBMNT}/boot/${GRUB2_DIR}
 if [[ $? -ne 0 ]]; then
   echo "ERROR: the rsync copy returned with an error exit status."
   exit 1
