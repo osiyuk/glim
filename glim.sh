@@ -48,7 +48,7 @@ fi
 echo "Found partition with label 'GLIM' : ${USBDEV1}"
 
 # Sanity check : our partition is the first and only one on the block device
-USBDEV=${USBDEV1%1}
+USBDEV=/dev/$(lsblk -no pkname "$USBDEV1")
 if [[ ! -b "$USBDEV" ]]; then
   echo "ERROR: ${USBDEV} block device not found."
   exit 1
