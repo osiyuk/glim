@@ -54,7 +54,7 @@ if [[ ! -b "$USBDEV" ]]; then
   exit 1
 fi
 echo "Found block device where to install GRUB2 : ${USBDEV}"
-if [[ `ls -1 ${USBDEV}* | wc -l` -ne 2 ]]; then
+if [[ `lsblk -ln ${USBDEV} | wc -l` -ne 2 ]]; then
   echo "ERROR: ${USBDEV1} isn't the only partition on ${USBDEV}"
   exit 1
 fi
