@@ -74,6 +74,9 @@ The supported `boot/iso/` sub-directories (in alphabetical order) are :
     ubuntu
     void
     xubuntu
+    kubuntu
+    popos
+    neon
 
 Any missing sub-directory will have the matching boot menu entry automatically
 disabled, so to skip any distribution, just don't create the directory.
