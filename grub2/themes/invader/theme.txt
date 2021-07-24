@@ -1,9 +1,8 @@
 # GRUB gfxmenu theme "invader".
 
-desktop-color: "#000"
+desktop-color: "#1E1C31"
 message-color: "#000"
 title-text: ""
-desktop-image: "background.png"
 
 + boot_menu {
   left = 40
@@ -29,12 +28,6 @@ desktop-image: "background.png"
   scrollbar_frame = "scrollbar_frame_*.png"
 }
 
-+ image {
-  file = "invader-220x160.png"
-  top = 20
-  left = 100%-240
-}
-
 + label {
   text = "'Up', 'Down', 'Enter', 'Esc' to navigate, 'e' to edit options"
   color = "#FFF"
@@ -46,7 +39,7 @@ desktop-image: "background.png"
 }
 
 + label {
-  text = "GRUB2 Live ISO Multiboot - https://github.com/thias/glim/"
+  text = "GRUB2 Live ISO Multiboot - https://github.com/classabbyamp/glim/"
   color = "#FFF"
   align = "center"
   left = 0
