@@ -1,6 +1,7 @@
 # GRUB gfxmenu theme "invader".
 
-desktop-color: "#1E1C31"
+desktop-color: "#000"
+desktop-image: "background.png"
 message-color: "#000"
 title-text: ""
 
