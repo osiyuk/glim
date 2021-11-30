@@ -48,13 +48,13 @@ fi
 echo "Found partition with label 'GLIM' : ${USBDEV1}"
 
 # Sanity check : our partition is the first and only one on the block device
-USBDEV=${USBDEV1%1}
+USBDEV=/dev/$(lsblk -no pkname "$USBDEV1")
 if [[ ! -b "$USBDEV" ]]; then
   echo "ERROR: ${USBDEV} block device not found."
   exit 1
 fi
 echo "Found block device where to install GRUB2 : ${USBDEV}"
-if [[ `ls -1 ${USBDEV}* | wc -l` -ne 2 ]]; then
+if [[ `lsblk -ln ${USBDEV} | wc -l` -ne 2 ]]; then
   echo "ERROR: ${USBDEV1} isn't the only partition on ${USBDEV}"
   exit 1
 fi
