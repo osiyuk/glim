@@ -51,6 +51,7 @@ The supported `boot/iso/` sub-directories (in alphabetical order) are :
     antergos
     antix
     arch
+    arch32
     bodhi
     centos
     clonezilla
