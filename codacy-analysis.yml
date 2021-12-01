@@ -15,10 +15,10 @@ name: Codacy Security Scan
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, security ]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ master ]
+    branches: [ master, security ]
   schedule:
     - cron: '24 21 * * 2'
 
@@ -45,7 +45,7 @@ jobs:
           gh-code-scanning-compat: true
           # Force 0 exit code to allow SARIF file generation
           # This will handover control about PR rejection to the GitHub side
-          max-allowed-issues: 3
+          max-allowed-issues: 20
 
       # Upload the SARIF file generated in the previous step
       - name: Upload SARIF results file
