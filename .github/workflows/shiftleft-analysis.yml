@@ -10,19 +10,20 @@ name: SL Scan
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, security ]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ master ]
+    branches: [ master, security ]
   schedule:
-    - cron: '21 18 * * 5'
+    # 15:46 every day
+    - cron: '46 15 * * *'
 
 jobs:
   Scan-Build:
     # Scan runs on ubuntu, mac and windows
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout
+    - uses: actions/checkout@v2
     # Instructions
     # 1. Setup JDK, Node.js, Python etc depending on your project type
     # 2. Compile or build the project before invoking scan
@@ -30,18 +31,17 @@ jobs:
     # 3. Invoke Scan with the github token. Leave the workspace empty to use relative url
 
     - name: Perform Scan
-      uses: ShiftLeftSecurity/scan-action077e710291d790175c9231f64
+      uses: ShiftLeftSecurity/scan-action@master
       env:
         WORKSPACE: ""
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SCAN_AUTO_BUILD: true
+        # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # SCAN_AUTO_BUILD: true
       with:
         output: reports
         # Scan auto-detects the languages in your project. To override uncomment the below variable and set the type
-        # type: credscan,java
-        # type: python
+        # type: bash
 
     - name: Upload report
-      uses: github/codeql-action/upload-sarif
+      uses: github/codeql-action/upload-sarif@v1
       with:
         sarif_file: reports
