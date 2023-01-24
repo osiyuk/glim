@@ -3,11 +3,20 @@
 # BASH. It's what I know best, sorry.
 #
 
-# Check that we are *NOT* running as root
-if [[ `id -u` -eq 0 ]]; then
-  echo "ERROR: Don't run as root, use a user with full sudo access."
-  exit 1
-fi
+which_sudo() {
+  if [ "$(id -u)" = "0" ]; then
+    echo "ERROR: Don't run as root, use a user with full sudo/doas access."
+    exit 1
+  elif command -v sudo >/dev/null && sudo -l | grep -q -e ' ALL$' -e xbps-install; then
+    echo sudo
+  elif command -v doas >/dev/null && [ -f /etc/doas.conf ]; then
+    echo doas
+  else
+    echo su
+  fi
+}
+
+SUDO=$(which_sudo)
 
 # Sanity check : GRUB2
 if which grub2-install &>/dev/null; then
@@ -54,10 +63,10 @@ if [[ ! -b "$USBDEV" ]]; then
   exit 1
 fi
 echo "Found block device where to install GRUB2 : ${USBDEV}"
-if [[ `ls -1 ${USBDEV}* | wc -l` -ne 2 ]]; then
-  echo "ERROR: ${USBDEV1} isn't the only partition on ${USBDEV}"
-  exit 1
-fi
+# if [[ `ls -1 ${USBDEV}* | wc -l` -ne 2 ]]; then
+#   echo "ERROR: ${USBDEV1} isn't the only partition on ${USBDEV}"
+#   exit 1
+# fi
 
 # Sanity check : our partition is mounted
 if ! grep -q -w ${USBDEV1} /proc/mounts; then
@@ -124,8 +133,8 @@ fi
 # Install GRUB2
 if [[ $BIOS == true ]]; then
   GRUB_TARGET="--target=i386-pc"
-  echo "Running ${GRUB2_INSTALL} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV} (with sudo) ..."
-  sudo ${GRUB2_INSTALL} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV}
+  echo "Running ${GRUB2_INSTALL} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV} (with ${SUDO}) ..."
+  ${SUDO} ${GRUB2_INSTALL} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV}
   if [[ $? -ne 0 ]]; then
       echo "ERROR: ${GRUB2_INSTALL} returned with an error exit status."
       exit 1
@@ -133,19 +142,19 @@ if [[ $BIOS == true ]]; then
 fi
 if [[ $EFI == true ]]; then
   GRUB_TARGET="--target=x86_64-efi --efi-directory=${USBMNT} --removable"
-  echo "Running ${GRUB2_INSTALL} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV} (with sudo) ..."
-  sudo ${GRUB2_INSTALL} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV}
+  echo "Running ${GRUB2_INSTALL} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV} (with ${SUDO}) ..."
+  ${SUDO} ${GRUB2_INSTALL} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV}
   if [[ $? -ne 0 ]]; then
     echo "ERROR: ${GRUB2_INSTALL} returned with an error exit status."
     exit 1
   fi
 fi
 
-# Check USB mount dir write permission, to use sudo if missing
+# Check USB mount dir write permission, to use ${SUDO} if missing
 if [[ -w "${USBMNT}" ]]; then
   CMD_PREFIX=""
 else
-  CMD_PREFIX="sudo"
+  CMD_PREFIX="${SUDO}"
 fi
 
 # Copy GRUB2 configuration
